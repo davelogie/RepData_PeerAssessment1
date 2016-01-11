@@ -1,25 +1,153 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+Reproducible Research - Assignment 1
+====================================
+
+**Loading and preprocessing the data**
+
+```{r}
+library(dplyr)
+library(ggplot2)
+activity <- read.table("activity.csv",header=TRUE,sep=",")
+```
+
+**1. What is mean total number of steps taken per day?**
+
+Summarize by day
+
+```{r}
+activity_by_day <- summarise(group_by(activity,date),sum_steps=sum(steps))
+```
+
+Produce the histogram
+
+```{r}
+hist(activity_by_day$sum_steps,col="blue",border="blue",main="Histogram of Steps Taken per Day",xlab="Number of Steps per Day")
+```
+
+Derive the mean
+
+```{r}
+by_day_mean <- mean(activity_by_day$sum_steps,na.rm=TRUE)
+by_day_mean
+```
+
+Derive the median
+
+```{r}
+by_day_median <- median(activity_by_day$sum_steps,na.rm=TRUE)
+by_day_median
+```
+
+**2. What is the average daily activity pattern?**
+
+Summarize by interval
+
+```{r}
+activity_by_interval <- summarise(group_by(activity,interval),mean_steps=mean(steps,na.rm=TRUE))
+```
+
+Produce the time series plot
+
+```{r}
+plot(activity_by_interval,type="l",main="Average number of steps taken per 5-minute interval",xlab="Time Interval",ylab="Mean number of steps")
+```
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r}
+max_steps <- subset(activity_by_interval,mean_steps==max(activity_by_interval$mean_steps))
+max_steps
+```
+
+**3. Imputing missing values**
+
+Calculate and report the total number of missing values in the dataset
+
+```{r}
+number_missing <- sum(is.na(activity$steps))
+number_missing
+```
+
+Devise a strategy for filling in all of the missing values in the dataset.   
+    - Use the mean for the interval already calculated above
+
+Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r}
+activity2 <- activity
+
+for (i in 1:dim(activity)[1]) {
+    if (is.na(activity$steps[i])) {
+        activity2$steps[i] <- subset(activity_by_interval,interval==activity$interval[i])[,2]
+
+}
+}
+activity2$steps <- as.numeric(activity2$steps)
+```
+
+Summarize by day
+
+```{r}
+activity2_by_day <- summarise(group_by(activity2,date),sum_steps=sum(steps))
+```
+
+Produce the histogram
+
+```{r}
+hist(activity2_by_day$sum_steps,col="green",border="green",main="Histogram of Steps Taken per Day",xlab="Number of Steps per Day")
+```
+
+Derive the mean
+
+```{r}
+by_day_mean2 <- mean(activity2_by_day$sum_steps)
+by_day_mean2
+```
+
+Derive the median
+
+```{r}
+by_day_median2 <- median(activity2_by_day$sum_steps)
+by_day_median2
+```
 
 
-## Loading and preprocessing the data
+Do these values differ from the estimates from the first part of the assignment?
 
+```{r}
+means_change <- !(by_day_mean == by_day_mean2)
+means_change
+medians_change <- !(by_day_median == by_day_median2)
+medians_change
+```
 
+What is the impact of imputing missing data on the estimates of the total daily number of steps?   
+    - The mean doesn't change since the imputed data was the mean, but the median has moved due to additional data points.
 
-## What is mean total number of steps taken per day?
+**4. Are there differences in activity patterns between weekdays and weekends?**
 
+Add the factor for weekday or weekend
 
+```{r}
+activity3 <- activity2
+for (i in 1:dim(activity2)[1]) {
+    dayofweek <- weekdays(as.POSIXct(activity2$date[i]))
+    if (dayofweek == "Saturday" | dayofweek == "Sunday") {
+        activity3$daytype[i] <- "Weekend"}
+    else {
+        activity3$daytype[i] <- "Weekday"}
+}
+```
 
-## What is the average daily activity pattern?
+Summarize by interval and day type
 
+```{r}
+activity_by_daytype <- summarise(group_by(activity3,interval,daytype),mean_steps=mean(steps))
+```
 
+Produce the plot
 
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+qplot(interval, mean_steps, data=activity_by_daytype, facets=.~daytype,geom="path")
+```
+    
+**THE END**
